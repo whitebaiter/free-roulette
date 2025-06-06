@@ -3,18 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>カスタムルーレット（レスポンシブ対応版）</title>
+    <title>カスタムルーレット</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db">
+
     <style>
         /* === 基本スタイル === */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --danger-color: #e74c3c;
+            --light-gray: #f4f4f4;
+            --dark-text: #333;
+        }
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: flex-start;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: var(--light-gray);
             gap: 40px;
-            /* ▼スマホ用にレイアウト変更の起点となる設定▼ */
             flex-wrap: wrap; 
         }
 
@@ -24,8 +34,9 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            /* ▼高さが可変になるため追加▼ */
             align-self: stretch;
+            display: flex;
+            flex-direction: column;
         }
 
         .roulette-area {
@@ -37,7 +48,6 @@
 
         .roulette-container {
             position: relative;
-            /* ▼サイズを可変にするため、max-widthに変更▼ */
             width: 400px;
             height: 400px;
         }
@@ -53,7 +63,7 @@
             height: 0;
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-top: 30px solid #c0392b;
+            border-top: 30px solid var(--danger-color);
             position: absolute;
             top: -10px;
             left: 50%;
@@ -68,9 +78,9 @@
             cursor: pointer;
             border-radius: 8px;
             border: none;
-            background-color: #3498db;
+            background-color: var(--primary-color);
             color: white;
-            box-shadow: 0 4px #2980b9;
+            box-shadow: 0 4px var(--secondary-color);
             transition: all 0.1s ease-in-out;
         }
 
@@ -79,13 +89,17 @@
             background-color: #bdc3c7;
             box-shadow: 0 4px #95a5a6;
         }
-        
+
         h1, h2 {
             text-align: center;
+            color: var(--dark-text);
         }
+        h1 { margin-top: 0; }
+        
         #options-list {
             list-style: none;
             padding: 0;
+            flex-grow: 1;
             max-height: 300px;
             overflow-y: auto;
         }
@@ -97,7 +111,7 @@
             border-bottom: 1px solid #eee;
         }
         .delete-btn {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
             color: white;
             border: none;
             padding: 5px 10px;
@@ -118,46 +132,42 @@
         #add-option-button {
             padding: 8px 15px;
             border: none;
-            background-color: #3498db;
+            background-color: var(--primary-color);
             color: white;
             border-radius: 4px;
             cursor: pointer;
         }
 
-        /* ========== ▼ここからレスポンシブ対応のCSS▼ ========== */
-        
-        /* 画面幅が768px以下の時に適用されるスタイル */
+        /* === レスポンシブ対応 === */
         @media (max-width: 768px) {
             body {
-                flex-direction: column; /* 全体を縦積みに変更 */
-                align-items: center; /* 中央揃えに */
+                flex-direction: column;
+                align-items: center;
                 padding: 10px;
             }
 
             .options-container {
-                width: 100%; /* 幅を画面いっぱいに */
-                max-width: 400px; /* ただし最大幅は設定 */
-                order: 2; /* 表示順をルーレットの後に変更 */
+                width: 100%;
+                max-width: 400px;
+                order: 2;
             }
 
             .roulette-area {
                 width: 100%;
-                order: 1; /* 表示順をリストの前に変更 */
+                order: 1;
             }
             
             .roulette-container {
-                /* 画面幅の90%を基準にサイズを決める */
                 width: 90vw; 
                 height: 90vw;
-                max-width: 400px; /* PC版よりは大きくならないように */
+                max-width: 400px;
                 max-height: 400px;
             }
 
             h1 {
-                font-size: 1.5em; /* 見出しを少し小さく */
+                font-size: 1.5em;
             }
         }
-
     </style>
 </head>
 <body>
@@ -174,7 +184,8 @@
         <h1>運試しルーレット</h1>
         <div class="roulette-container">
             <div class="pointer"></div>
-            <canvas id="roulette-canvas"></canvas> </div>
+            <canvas id="roulette-canvas"></canvas>
+        </div>
         <button id="spin-button">SPIN!</button>
     </div>
 
@@ -189,24 +200,15 @@
 
         let options = ['ラーメン', 'カレー', '寿司', 'パスタ', '焼肉', 'うどん'];
         const colors = ['#f1c40f', '#e67e22', '#e74c3c', '#9b59b6', '#3498db', '#1abc9c', '#2ecc71'];
-
         let currentAngle = 0;
         let isSpinning = false;
-        
-        // ========== ▼ここからJavaScriptの修正箇所▼ ==========
 
-        // Canvasのサイズをコンテナに合わせて調整し、再描画する関数
         function resizeCanvas() {
-            // コンテナの現在の幅を取得
             const size = rouletteContainer.clientWidth;
-            // Canvasの描画サイズを更新（これにより描画が鮮明になる）
             canvas.width = size;
             canvas.height = size;
-            // ルーレットを再描画
             drawRoulette();
         }
-        
-        // ========== ▲ここまでJavaScriptの修正箇所▲ ==========
 
         function render() {
             optionsList.innerHTML = '';
@@ -225,23 +227,28 @@
             });
             drawRoulette();
         }
-        
+
         function drawRoulette() {
             const numOptions = options.length;
-            const radius = canvas.width / 2; // 半径をcanvasのサイズから計算
-
+            const radius = canvas.width / 2;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             if (numOptions === 0) {
-                // ... (省略)
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius - 2, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ccc';
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('選択肢を追加', radius, radius);
+                ctx.restore();
                 return;
             };
-            
             const arcSize = 2 * Math.PI / numOptions;
-            
             ctx.save();
             ctx.translate(radius, radius);
-
             for (let i = 0; i < numOptions; i++) {
                 const angle = i * arcSize;
                 ctx.beginPath();
@@ -250,24 +257,21 @@
                 ctx.closePath();
                 ctx.fillStyle = colors[i % colors.length];
                 ctx.fill();
-
                 ctx.save();
                 ctx.fillStyle = 'white';
-                // 文字サイズをルーレットのサイズに連動させる
                 const fontSize = Math.max(12, Math.min(radius / 8, 20));
                 ctx.font = `bold ${fontSize}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 const textAngle = angle + arcSize / 2;
                 ctx.rotate(textAngle);
-                ctx.fillText(options[i], radius * 0.6, 0); // テキストの位置を半径比で指定
+                ctx.fillText(options[i], radius * 0.6, 0);
                 ctx.restore();
             }
             ctx.restore();
         }
 
         spinButton.addEventListener('click', () => {
-            // ... (スピンのロジックは変更なし)
             if (isSpinning || options.length < 2) return;
             isSpinning = true;
             spinButton.disabled = true;
@@ -287,7 +291,6 @@
         });
 
         addOptionForm.addEventListener('submit', (e) => {
-            // ... (フォームのロジックは変更なし)
             e.preventDefault();
             const newOption = newOptionInput.value.trim();
             if (newOption) {
@@ -297,11 +300,20 @@
             }
         });
 
-        // ========== ▼ページ読み込み時とウィンドウサイズ変更時にCanvasサイズを調整▼ ==========
         window.addEventListener('DOMContentLoaded', resizeCanvas);
         window.addEventListener('resize', resizeCanvas);
-        
-        render(); // 初期描画
+        render();
+
+        // --- PWA Service Worker 登録 ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
     </script>
 </body>
 </html>
